@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
-import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -31,20 +30,17 @@ import com.couchbase.lite.util.Log;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 public class MainActivity extends ActionBarActivity {
 
-    private Camera camera;
     private static final int CAMERA_CAPTURE_IMAGE_REQUEST_CODE = 100;
     private Uri imageUri;
     InputStream stream;
@@ -129,17 +125,6 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View view) {
 
-//                // create Intent to take a picture and return control to the calling application
-//                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//
-//                imageUri = getPictureFileUri(); // create a file to save the image
-//                intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri); // set the image file name
-//
-//                // start the image capture Intent
-//                startActivityForResult(intent, CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
-//
-//
-
                 // give the image a name so we can store it in the phone's default location
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
 
@@ -156,42 +141,6 @@ public class MainActivity extends ActionBarActivity {
                 startActivityForResult(intent, CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
             }
 
-            private Uri getPictureFileUri() {
-
-                File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_PICTURES), "RanteR2");
-                // This location works best if you want the created images to be shared
-                // between applications and persist after your app has been uninstalled.
-
-                // Create the storage directory if it does not exist
-                if (! mediaStorageDir.exists()){
-                    if (! mediaStorageDir.mkdirs()){
-                        Log.d("RanteR", "failed to create directory");
-                        return null;
-                    }
-                    mediaStorageDir.setWritable(true,false);
-                }
-
-                // Create a media file name
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
-                        Locale.getDefault()).format(new java.util.Date());
-
-                try {
-//                    File f = new File( mediaStorageDir.getPath() + File.separator
-//                            + );
-                    FileOutputStream fos = openFileOutput("IMG_" + timeStamp + ".jpg", Context.MODE_WORLD_WRITEABLE);
-                    fos.close();
-                }
-                catch (Exception e){
-                    Log.e("","",e);
-                };
-
-                File mediaFile = new File(mediaStorageDir.getPath() + File.separator
-                        + "IMG_" + timeStamp + ".jpg");
-
-                return Uri.fromFile(mediaFile);
-
-            }
         });
 
     }
