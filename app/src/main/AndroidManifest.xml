@@ -4,6 +4,7 @@
 
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
 
+    <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
@@ -25,6 +26,7 @@
             android:name="com.example.ranter.app.StreamActivity"
             android:label="@string/title_activity_stream" >
         </activity>
+
     </application>
 
 </manifest>

@@ -21,13 +21,14 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.couchbase.lite.CouchbaseLiteException;
 import com.couchbase.lite.Database;
 import com.couchbase.lite.Document;
 import com.couchbase.lite.Manager;
+import com.couchbase.lite.UnsavedRevision;
 import com.couchbase.lite.util.Log;
 
 import java.io.File;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -40,7 +41,9 @@ public class MainActivity extends ActionBarActivity {
 
     private Camera camera;
     private static final int CAMERA_CAPTURE_IMAGE_REQUEST_CODE = 100;
-    private Uri fileUri;
+    //private String fileName;
+    private Uri imageUri;
+    InputStream stream;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,15 +96,23 @@ public class MainActivity extends ActionBarActivity {
                     Document document = ranterDb.createDocument();
                     document.putProperties(doc);
 
+                    if(stream != null) {
+
+                        stream.reset();
+                        UnsavedRevision newRev = document.getCurrentRevision().createRevision();
+                        newRev.setAttachment(imageUri.getPath(), "image/jpeg", stream);
+                        newRev.save();
+
+                    }
                     Log.d(Log.TAG, "Document written to database ranter with Id = " + document.getId());
 
                     // retrieve the document from the database
                     Document retrievedDocument = ranterDb.getDocument(document.getId());
 
-                    // d    isplay the retrieved document
+                    // display the retrieved document
                     Log.d(Log.TAG, "retrievedDocument=" + String.valueOf(retrievedDocument.getProperties()));
 
-                } catch (CouchbaseLiteException e) {
+                } catch (Exception e) {
                     Log.e(Log.TAG, "Cannot write document to database", e);
                 }
             }
@@ -113,26 +124,39 @@ public class MainActivity extends ActionBarActivity {
 
             @Override
             public void onClick(View view) {
+
+                // create Intent to take a picture and return control to the calling application
                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-                fileUri = getPictureFileUri();
-
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+                imageUri = getPictureFileUri(); // create a file to save the image
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri); // set the image file name
 
                 // start the image capture Intent
                 startActivityForResult(intent, CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
+
             }
 
             private Uri getPictureFileUri() {
-                File sdDir = Environment
-                        .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                File renterDir = new File(sdDir, "RanteRCamera");
+
+                File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_PICTURES), "RanteR");
+                // This location works best if you want the created images to be shared
+                // between applications and persist after your app has been uninstalled.
+
+                // Create the storage directory if it does not exist
+                if (! mediaStorageDir.exists()){
+                    if (! mediaStorageDir.mkdirs()){
+                        Log.d("RanteR", "failed to create directory");
+                        return null;
+                    }
+                }
 
                 // Create a media file name
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
                         Locale.getDefault()).format(new java.util.Date());
 
-                File mediaFile = new File(renterDir.getPath() + File.separator
+
+                File mediaFile = new File(mediaStorageDir.getPath() + File.separator
                         + "IMG_" + timeStamp + ".jpg");
 
                 return Uri.fromFile(mediaFile);
@@ -171,13 +195,19 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
         // if the result is capturing Image
         if (requestCode == CAMERA_CAPTURE_IMAGE_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
 
-                // image captured, need to display and
-                // attach it to the document
-                previewImage();
+                try {
+
+                    previewImage();
+                }
+
+                catch (Exception e){
+                    Log.e(Log.TAG, "Error", e);
+                }
 
             } else if (resultCode == RESULT_CANCELED) {
 
@@ -207,8 +237,9 @@ public class MainActivity extends ActionBarActivity {
             // images
             options.inSampleSize = 8;
 
-            final Bitmap bitmap = BitmapFactory.decodeFile(fileUri.getPath(),
-                    options);
+
+            final Bitmap bitmap = BitmapFactory.decodeFile(imageUri.toString(),
+                                                           options);
 
             imgPreview.setImageBitmap(bitmap);
 
@@ -216,4 +247,29 @@ public class MainActivity extends ActionBarActivity {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Here we store the file url as it will be null after returning from camera
+     * app
+     */
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        // save file url in bundle as it will be null on scren orientation
+        // changes
+        outState.putParcelable("file_uri", imageUri);
+    }
+
+    /*
+     * Here we restore the fileUri again
+     */
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        // get the file url
+        imageUri = savedInstanceState.getParcelable("file_uri");
+    }
+
 }
