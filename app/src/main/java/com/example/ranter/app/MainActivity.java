@@ -1,10 +1,12 @@
 package com.example.ranter.app;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Rect;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Bundle;
@@ -28,9 +30,12 @@ import com.couchbase.lite.UnsavedRevision;
 import com.couchbase.lite.util.Log;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Locale;
@@ -41,7 +46,6 @@ public class MainActivity extends ActionBarActivity {
 
     private Camera camera;
     private static final int CAMERA_CAPTURE_IMAGE_REQUEST_CODE = 100;
-    //private String fileName;
     private Uri imageUri;
     InputStream stream;
 
@@ -125,21 +129,37 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View view) {
 
-                // create Intent to take a picture and return control to the calling application
+//                // create Intent to take a picture and return control to the calling application
+//                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//
+//                imageUri = getPictureFileUri(); // create a file to save the image
+//                intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri); // set the image file name
+//
+//                // start the image capture Intent
+//                startActivityForResult(intent, CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
+//
+//
+
+                // give the image a name so we can store it in the phone's default location
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Images.Media.TITLE, "IMG_" + timeStamp + ".jpg");
+
                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-                imageUri = getPictureFileUri(); // create a file to save the image
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri); // set the image file name
+                //fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE); // create a file to save the image (this doesn't work at all for images)
+                imageUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values); // store content values
+                intent.putExtra( MediaStore.EXTRA_OUTPUT,  imageUri);
 
                 // start the image capture Intent
                 startActivityForResult(intent, CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
-
             }
 
             private Uri getPictureFileUri() {
 
                 File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_PICTURES), "RanteR");
+                        Environment.DIRECTORY_PICTURES), "RanteR2");
                 // This location works best if you want the created images to be shared
                 // between applications and persist after your app has been uninstalled.
 
@@ -149,12 +169,22 @@ public class MainActivity extends ActionBarActivity {
                         Log.d("RanteR", "failed to create directory");
                         return null;
                     }
+                    mediaStorageDir.setWritable(true,false);
                 }
 
                 // Create a media file name
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
                         Locale.getDefault()).format(new java.util.Date());
 
+                try {
+//                    File f = new File( mediaStorageDir.getPath() + File.separator
+//                            + );
+                    FileOutputStream fos = openFileOutput("IMG_" + timeStamp + ".jpg", Context.MODE_WORLD_WRITEABLE);
+                    fos.close();
+                }
+                catch (Exception e){
+                    Log.e("","",e);
+                };
 
                 File mediaFile = new File(mediaStorageDir.getPath() + File.separator
                         + "IMG_" + timeStamp + ".jpg");
@@ -230,6 +260,8 @@ public class MainActivity extends ActionBarActivity {
             ImageView imgPreview = (ImageView) findViewById(R.id.imgPreview);
             imgPreview.setVisibility(View.VISIBLE);
 
+            File file = getOutputFile();
+
             // bimatp factory
             BitmapFactory.Options options = new BitmapFactory.Options();
 
@@ -237,13 +269,13 @@ public class MainActivity extends ActionBarActivity {
             // images
             options.inSampleSize = 8;
 
-
-            final Bitmap bitmap = BitmapFactory.decodeFile(imageUri.toString(),
-                                                           options);
+            final Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(file),
+                                                             new Rect(0,0,0,0),
+                                                             options);
 
             imgPreview.setImageBitmap(bitmap);
 
-        } catch (NullPointerException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -270,6 +302,40 @@ public class MainActivity extends ActionBarActivity {
 
         // get the file url
         imageUri = savedInstanceState.getParcelable("file_uri");
+    }
+
+    /** Create a File for saving an image or video */
+    private static File getOutputFile()
+    {
+        // To be safe, you should check that the SDCard is mounted
+
+        if(Environment.getExternalStorageState() != null) {
+
+            // this works for Android 2.2 and above
+            File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "AndroidCameraTestsFolder");
+
+            // This location works best if you want the created images to be shared
+            // between applications and persist after your app has been uninstalled.
+
+            // Create the storage directory if it does not exist
+            if (! mediaStorageDir.exists()) {
+                if (! mediaStorageDir.mkdirs()) {
+                    Log.d(Log.TAG, "failed to create directory");
+                    return null;
+                }
+            }
+
+            // Create a media file name
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            File mediaFile;
+
+            mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+                                 "IMG_"+ timeStamp + ".jpg");
+
+            return mediaFile;
+        }
+
+        return null;
     }
 
 }
