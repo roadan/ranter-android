@@ -1,16 +1,12 @@
 package com.example.ranter.app;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,8 +24,7 @@ import com.couchbase.lite.Manager;
 import com.couchbase.lite.UnsavedRevision;
 import com.couchbase.lite.util.Log;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -41,9 +36,7 @@ import java.util.UUID;
 
 public class MainActivity extends ActionBarActivity {
 
-    private static final int CAMERA_CAPTURE_IMAGE_REQUEST_CODE = 100;
-    private Uri imageUri;
-    InputStream stream;
+    byte[] image;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,11 +89,16 @@ public class MainActivity extends ActionBarActivity {
                     Document document = ranterDb.createDocument();
                     document.putProperties(doc);
 
-                    if(stream != null) {
+                    if(image != null) {
 
-                        stream.reset();
+                        // Create a media file name
+                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+
+                        String fileName  = "IMG_"+ timeStamp + ".jpg";
+                        InputStream stream =new ByteArrayInputStream(image);
+
                         UnsavedRevision newRev = document.getCurrentRevision().createRevision();
-                        newRev.setAttachment(imageUri.getPath(), "image/jpeg", stream);
+                        newRev.setAttachment(fileName, "image/jpeg", stream);
                         newRev.save();
 
                     }
@@ -125,20 +123,9 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View view) {
 
-                // give the image a name so we can store it in the phone's default location
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+                startActivityForResult(intent, 1);
 
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.Images.Media.TITLE, "IMG_" + timeStamp + ".jpg");
-
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-
-                //fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE); // create a file to save the image (this doesn't work at all for images)
-                imageUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values); // store content values
-                intent.putExtra( MediaStore.EXTRA_OUTPUT,  imageUri);
-
-                // start the image capture Intent
-                startActivityForResult(intent, CAMERA_CAPTURE_IMAGE_REQUEST_CODE);
             }
 
         });
@@ -175,30 +162,13 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-        // if the result is capturing Image
-        if (requestCode == CAMERA_CAPTURE_IMAGE_REQUEST_CODE) {
-            if (resultCode == RESULT_OK) {
-
-                try {
-
-                    previewImage();
-                }
-
-                catch (Exception e){
-                    Log.e(Log.TAG, "Error", e);
-                }
-
-            } else if (resultCode == RESULT_CANCELED) {
-
-                // user cancelled Image capture
-                Toast.makeText(getApplicationContext(),
-                        "Image capture canceled", Toast.LENGTH_SHORT)
-                        .show();
-            } else {
-                // failed to capture image
-                Toast.makeText(getApplicationContext(),
-                        "Failed to capture image", Toast.LENGTH_SHORT)
-                        .show();
+        if (requestCode == 1) {
+            if(resultCode == RESULT_OK){
+                image = data.getByteArrayExtra("result");
+                previewImage();
+            }
+            if (resultCode == RESULT_CANCELED) {
+                //Write your code if there's no result
             }
         }
     }
@@ -209,8 +179,6 @@ public class MainActivity extends ActionBarActivity {
             ImageView imgPreview = (ImageView) findViewById(R.id.imgPreview);
             imgPreview.setVisibility(View.VISIBLE);
 
-            File file = getOutputFile();
-
             // bimatp factory
             BitmapFactory.Options options = new BitmapFactory.Options();
 
@@ -218,7 +186,7 @@ public class MainActivity extends ActionBarActivity {
             // images
             options.inSampleSize = 8;
 
-            final Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(file),
+            final Bitmap bitmap = BitmapFactory.decodeStream(new ByteArrayInputStream(image),
                                                              new Rect(0,0,0,0),
                                                              options);
 
@@ -228,63 +196,4 @@ public class MainActivity extends ActionBarActivity {
             e.printStackTrace();
         }
     }
-
-    /**
-     * Here we store the file url as it will be null after returning from camera
-     * app
-     */
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-
-        // save file url in bundle as it will be null on scren orientation
-        // changes
-        outState.putParcelable("file_uri", imageUri);
-    }
-
-    /*
-     * Here we restore the fileUri again
-     */
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-
-        // get the file url
-        imageUri = savedInstanceState.getParcelable("file_uri");
-    }
-
-    /** Create a File for saving an image or video */
-    private static File getOutputFile()
-    {
-        // To be safe, you should check that the SDCard is mounted
-
-        if(Environment.getExternalStorageState() != null) {
-
-            // this works for Android 2.2 and above
-            File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "AndroidCameraTestsFolder");
-
-            // This location works best if you want the created images to be shared
-            // between applications and persist after your app has been uninstalled.
-
-            // Create the storage directory if it does not exist
-            if (! mediaStorageDir.exists()) {
-                if (! mediaStorageDir.mkdirs()) {
-                    Log.d(Log.TAG, "failed to create directory");
-                    return null;
-                }
-            }
-
-            // Create a media file name
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            File mediaFile;
-
-            mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-                                 "IMG_"+ timeStamp + ".jpg");
-
-            return mediaFile;
-        }
-
-        return null;
-    }
-
 }
