@@ -30,5 +30,12 @@ dependencies {
     compile 'com.android.support:appcompat-v7:19.+'
     compile 'org.apache.commons:commons-lang3:3.2'
     compile 'com.couchbase.lite:couchbase-lite-android:1.0.0'
+
+    // You must install or update the Google Repository through the SDK manager to use this dependency.
+    // The Google Repository (separate from the corresponding library) can be found in the Extras category.
+    // compile 'com.google.android.gms:play-services:4.0.30'
+    // You must install or update the Google Repository through the SDK manager to use this dependency.
+    // The Google Repository (separate from the corresponding library) can be found in the Extras category.
+    // 
     compile fileTree(dir: 'libs', include: ['*.jar'])
 }

@@ -76,9 +76,10 @@ public class MainActivity extends ActionBarActivity {
                 Map<String, Object> doc = new HashMap<String, Object>();
 
                 doc.put("id", UUID.randomUUID());
+                doc.put("userName", ((RanteRApplication) getApplication()).getUserName());
                 doc.put("date", now);
                 doc.put("type", "rant");
-                doc.put("rantText", ((EditText) findViewById(R.id.rantText)).getText());
+                doc.put("rantText", ((EditText) findViewById(R.id.rantText)).getText().toString().trim());
 
                 Manager manager = ((RanteRApplication) getApplication()).getCouchbaseManager();
 

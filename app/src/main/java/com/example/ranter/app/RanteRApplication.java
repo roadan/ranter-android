@@ -16,6 +16,8 @@ import org.apache.commons.lang3.time.StopWatch;
 public class RanteRApplication extends Application {
 
     private Manager manager;
+    private String userName;
+    private String password;
 
     @Override
     public void onCreate() {
@@ -57,6 +59,28 @@ public class RanteRApplication extends Application {
         return manager;
 
     }
+
+    public void setUserName(String userName){
+
+        this.userName = userName;
+    }
+
+    public void setPassword(String password){
+
+        this.password = password;
+    }
+
+    public String getUserName(){
+
+        return this.userName;
+    }
+
+    public String getPassword(){
+
+        return this.password;
+    }
+
+
 
 
 }
