@@ -56,6 +56,8 @@ public class MainActivity extends ActionBarActivity {
 
             // create a new database
             Database ranterDb = manager.getDatabase("ranter");
+            ViewsInit init = new ViewsInit(ranterDb);
+            init.init(((RanteRApplication) getApplication()).getUserName());
 
         } catch (Exception e) {
             Log.e(Log.TAG, "Error: " + e);
@@ -80,6 +82,7 @@ public class MainActivity extends ActionBarActivity {
                 doc.put("date", now);
                 doc.put("type", "rant");
                 doc.put("rantText", ((EditText) findViewById(R.id.rantText)).getText().toString().trim());
+
 
                 Manager manager = ((RanteRApplication) getApplication()).getCouchbaseManager();
 
