@@ -22,10 +22,13 @@ import com.couchbase.lite.Database;
 import com.couchbase.lite.Document;
 import com.couchbase.lite.Manager;
 import com.couchbase.lite.UnsavedRevision;
+import com.couchbase.lite.replicator.Replication;
 import com.couchbase.lite.util.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -34,9 +37,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements Replication.ChangeListener{
+
+    public static final String SYNC_URL = "http://10.0.2.2:4984/ranter";  // 10.0.2.2 == Android Simulator equivalent of 127.0.0.1
 
     byte[] image;
+    Database ranterDb;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,10 +61,32 @@ public class MainActivity extends ActionBarActivity {
         try {
 
             // create a new database
-            Database ranterDb = manager.getDatabase("ranter");
+            ranterDb = manager.getDatabase("ranter");
 
         } catch (Exception e) {
             Log.e(Log.TAG, "Error: " + e);
+        }
+
+        // Create Couchbase Sync Gateway replication:
+        if(ranterDb != null) {
+            URL syncUrl;
+            try {
+                syncUrl = new URL(SYNC_URL);
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+
+            Replication pullReplication = ranterDb.createPullReplication(syncUrl);
+            pullReplication.setContinuous(true);
+
+            Replication pushReplication = ranterDb.createPushReplication(syncUrl);
+            pushReplication.setContinuous(true);
+
+            pullReplication.start();
+            pushReplication.start();
+
+            pullReplication.addChangeListener(this);
+            pushReplication.addChangeListener(this);
         }
 
         Button button = (Button) findViewById(R.id.rantButton);
@@ -195,6 +223,23 @@ public class MainActivity extends ActionBarActivity {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void changed(Replication.ChangeEvent event) {
+
+        Replication replication = event.getSource();
+        android.util.Log.d("Sync", "Replication : " + replication + " changed.");
+        if (!replication.isRunning()) {
+            String msg = String.format("Replicator %s not running", replication);
+            android.util.Log.d("Sync", msg);
+        }
+        else {
+            int processed = replication.getCompletedChangesCount();
+            int total = replication.getChangesCount();
+            String msg = String.format("Replicator processed %d / %d", processed, total);
+            android.util.Log.d("Sync", msg);
         }
     }
 }
