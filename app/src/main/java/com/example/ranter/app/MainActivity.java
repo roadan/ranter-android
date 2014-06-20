@@ -39,7 +39,7 @@ import java.util.UUID;
 
 public class MainActivity extends ActionBarActivity implements Replication.ChangeListener{
 
-    public static final String SYNC_URL = "http://10.0.2.2:4984/ranter";  // 10.0.2.2 == Android Simulator equivalent of 127.0.0.1
+    public static final String SYNC_URL = "http://procouchbase.cloudapp.net:4984/ranter";  // 10.0.2.2 == Android Simulator equivalent of 127.0.0.1
 
     byte[] image;
     Database ranterDb;
@@ -71,24 +71,24 @@ public class MainActivity extends ActionBarActivity implements Replication.Chang
 
         // Create Couchbase Sync Gateway replication:
         if(ranterDb != null) {
-            URL syncUrl;
+            URL url;
             try {
-                syncUrl = new URL(SYNC_URL);
+                url = new URL(SYNC_URL);
             } catch (MalformedURLException e) {
                 throw new RuntimeException(e);
             }
 
-            Replication pullReplication = ranterDb.createPullReplication(syncUrl);
-            pullReplication.setContinuous(true);
+            Replication pull = ranterDb.createPullReplication(url);
+            pull.setContinuous(true);
 
-            Replication pushReplication = ranterDb.createPushReplication(syncUrl);
-            pushReplication.setContinuous(true);
+            Replication push = ranterDb.createPushReplication(url);
+            push.setContinuous(true);
 
-            pullReplication.start();
-            pushReplication.start();
+            pull.start();
+            push.start();
 
-            pullReplication.addChangeListener(this);
-            pushReplication.addChangeListener(this);
+            pull.addChangeListener(this);
+            push.addChangeListener(this);
         }
 
         Button button = (Button) findViewById(R.id.rantButton);
@@ -235,13 +235,13 @@ public class MainActivity extends ActionBarActivity implements Replication.Chang
         Replication replication = event.getSource();
         android.util.Log.d("Sync", "Replication : " + replication + " changed.");
         if (!replication.isRunning()) {
-            String msg = String.format("Replicator %s not running", replication);
+            String msg = String.format("Replication %s is stopped", replication);
             android.util.Log.d("Sync", msg);
         }
         else {
             int processed = replication.getCompletedChangesCount();
             int total = replication.getChangesCount();
-            String msg = String.format("Replicator processed %d / %d", processed, total);
+            String msg = String.format("Changes processed %d / %d", processed, total);
             android.util.Log.d("Sync", msg);
         }
     }
